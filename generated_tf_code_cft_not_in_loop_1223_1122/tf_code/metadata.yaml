@@ -1,0 +1,202 @@
+#
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: TerraformBlueprint
+metadata:
+  name: terraform-google-cloud-sql
+  source:
+    type: git
+    git:
+      repo: https://github.com/GoogleCloudPlatform/terraform-google-cloud-sql.git
+      dir: .
+  version: 1.0.0
+  actuationTool:
+    type: Terraform
+    versions:
+    - ">= 1.3"
+  info:
+    title: Cloud SQL Instance
+    icon: assets/icon.png
+    description:
+      tagline: A secure and reliable Cloud SQL instance with enterprise best practices.
+      detailed: This blueprint deploys a Google Cloud SQL instance with support for high availability, private networking, read replicas, automated backups, and IAM database authentication.
+    documentations:
+    - title: Cloud SQL Documentation
+      url: https://cloud.google.com/sql/docs
+    services:
+    - sqladmin.googleapis.com
+    - compute.googleapis.com
+    - servicenetworking.googleapis.com
+    - cloudresourcemanager.googleapis.com
+    roles:
+    - role: roles/cloudsql.admin
+      level: project
+    - role: roles/compute.networkUser
+      level: project
+    - role: roles/iam.serviceAccountUser
+      level: project
+spec:
+  variables:
+  - name: project_id
+    description: The ID of the project in which the resource belongs.
+    type: string
+    required: true
+  - name: name
+    description: The name of the Cloud SQL instance.
+    type: string
+    required: true
+  - name: region
+    description: The region where the Cloud SQL instance will be created.
+    type: string
+    required: true
+  - name: database_version
+    description: The database engine and version to use, e.g., 'POSTGRES_15' or 'MYSQL_8_0'.
+    type: string
+    required: true
+  - name: tier
+    description: The machine type for the instance, e.g., 'db-n1-standard-1'.
+    type: string
+    default: "db-n1-standard-1"
+  - name: availability_type
+    description: The availability type of the instance. 'REGIONAL' provides high availability. 'ZONAL' is a single-zone instance.
+    type: string
+    default: "REGIONAL"
+  - name: edition
+    description: The edition of the instance, e.g., 'ENTERPRISE_PLUS'. If null, the default edition is used.
+    type: string
+    default: null
+  - name: deletion_protection
+    description: Enables deletion protection for the instance.
+    type: boolean
+    default: true
+  - name: disk_type
+    description: The type of storage disk. Can be 'PD_SSD' or 'PD_HDD'.
+    type: string
+    default: "PD_SSD"
+  - name: disk_size
+    description: The initial size of the disk in GB.
+    type: number
+    default: 10
+  - name: disk_autoresize
+    description: If set to true, storage will automatically increase when 90% full.
+    type: boolean
+    default: true
+  - name: disk_autoresize_limit
+    description: The maximum size to which storage can be automatically increased. A value of 0 means no limit.
+    type: number
+    default: 0
+  - name: private_network
+    description: The self-link of the VPC network to attach the instance to for private IP. If null, no private IP is configured.
+    type: string
+    default: null
+  - name: enable_public_ip
+    description: Set to true to assign a public IP address to the instance.
+    type: boolean
+    default: false
+  - name: authorized_networks
+    description: A list of objects representing authorized networks. Each object has 'name' and 'value' (CIDR notation).
+    type: array
+    default: []
+  - name: backup_configuration
+    description: Configuration for automated backups.
+    type: object
+    default:
+      enabled: true
+      start_time: "03:00"
+      location: null
+      point_in_time_recovery_enabled: true
+      transaction_log_retention_days: 7
+  - name: maintenance_window
+    description: The maintenance window for the instance. Object with 'day' (1-7), 'hour' (0-23), and 'update_track'.
+    type: object
+    default: null
+  - name: databases
+    description: A list of databases to create on the instance. Each object has 'name', and optional 'charset' and 'collation'.
+    type: array
+    default: []
+  - name: users
+    description: A list of users to create. For 'BUILT_IN' users, passwords are auto-generated.
+    type: array
+    default: []
+  - name: database_flags
+    description: A list of database flags to apply to the instance. Each object has 'name' and 'value'.
+    type: array
+    default: []
+  - name: read_replicas
+    description: A map of read replica configurations to create. The key will be used as a suffix for the replica name.
+    type: object
+    default: {}
+  - name: encryption_key_name
+    description: The full path to the customer-managed encryption key (CMEK) to use for disk encryption.
+    type: string
+    default: null
+  variableGroups:
+  - name: "Instance Configuration"
+    description: "Core settings for the Cloud SQL instance."
+    variables:
+    - project_id
+    - name
+    - region
+    - database_version
+    - tier
+    - availability_type
+    - edition
+    - deletion_protection
+  - name: "Storage"
+    description: "Configuration for the instance's data disk."
+    variables:
+    - disk_type
+    - disk_size
+    - disk_autoresize
+    - disk_autoresize_limit
+  - name: "Networking"
+    description: "Network access and firewall settings."
+    variables:
+    - private_network
+    - enable_public_ip
+    - authorized_networks
+  - name: "Backup and Maintenance"
+    description: "Settings for automated backups and maintenance windows."
+    variables:
+    - backup_configuration
+    - maintenance_window
+  - name: "Databases and Users"
+    description: "Databases and user accounts to create on the instance."
+    variables:
+    - databases
+    - users
+  - name: "Advanced"
+    description: "Advanced configuration options like flags, replicas, and encryption."
+    variables:
+    - database_flags
+    - read_replicas
+    - encryption_key_name
+  outputs:
+  - name: instance
+    description: The full resource object for the primary Cloud SQL instance.
+  - name: instance_connection_name
+    description: The connection name of the primary Cloud SQL instance.
+  - name: private_ip_address
+    description: The private IP address of the primary Cloud SQL instance.
+  - name: public_ip_address
+    description: The public IP address of the primary Cloud SQL instance.
+  - name: replicas
+    description: A map of the full resource objects for the read replica instances, keyed by their suffix.
+  - name: replica_connection_names
+    description: A map of connection names for the read replica instances, keyed by their suffix.
+  - name: generated_user_passwords
+    description: A map of generated passwords for the 'BUILT_IN' database users, keyed by username. Treat this output as sensitive.
+    sensitive: true
