@@ -1,0 +1,287 @@
+#
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: TerraformBlueprint
+metadata:
+  name: terraform-google-cloud-sql
+  source:
+    # This is a hypothetical source URL.
+    git:
+      repo: https://github.com/GoogleCloudPlatform/terraform-google-cloud-sql.git
+      ref: main
+spec:
+  info:
+    title: Cloud SQL Instance
+    source:
+      repo: https://github.com/GoogleCloudPlatform/terraform-google-cloud-sql.git
+      type: Git
+    version: 1.0.0
+    actuationTool:
+      type: Terraform
+      versions:
+      - '>= 1.0'
+    description:
+      tagline: A comprehensive module for creating and managing Google Cloud SQL instances.
+      detailed: This Terraform blueprint deploys a primary Cloud SQL instance with support for read replicas, databases, users, networking, high availability, backups, and more.
+    icon: # path-to-icon.svg
+    diagrams:
+    - name: architecture.png
+      description: A high-level architecture diagram of the resources created by this module.
+    documentations:
+    - title: Module README
+      url: https://github.com/GoogleCloudPlatform/terraform-google-cloud-sql/blob/main/README.md
+  interfaces:
+    variables:
+    - name: project_id
+      description: The ID of the project in which to create the Cloud SQL instance.
+      type: string
+      required: true
+      default: null
+    - name: name
+      description: The name of the Cloud SQL instance. This should be unique within the project.
+      type: string
+      required: false
+      default: my-cloudsql-instance
+    - name: database_version
+      description: The database version to use. See the official documentation for supported versions. Examples `POSTGRES_14`, `MYSQL_8_0`, `SQLSERVER_2019_STANDARD`.
+      type: string
+      required: false
+      default: POSTGRES_14
+    - name: region
+      description: The region where the Cloud SQL instance will be created.
+      type: string
+      required: false
+      default: us-central1
+    - name: zone
+      description: The zone for the primary instance. Only applicable if availability_type is ZONAL.
+      type: string
+      required: false
+      default: null
+    - name: tier
+      description: The machine type for the instance. See the official documentation for available tiers.
+      type: string
+      required: false
+      default: db-g1-small
+    - name: availability_type
+      description: The availability type of the instance. `ZONAL` for a single-zone instance, `REGIONAL` for a high-availability instance with a failover replica. For production, `REGIONAL` is strongly recommended.
+      type: string
+      required: false
+      default: REGIONAL
+    - name: deletion_protection_enabled
+      description: If set to true, the instance cannot be accidentally deleted. This is a best practice for production instances.
+      type: boolean
+      required: false
+      default: true
+    - name: disk_type
+      description: The type of data disk `PD_SSD` or `PD_HDD`.
+      type: string
+      required: false
+      default: PD_SSD
+    - name: disk_size
+      description: The size of the data disk in GB.
+      type: number
+      required: false
+      default: 10
+    - name: disk_autoresize
+      description: If set to true, the storage will automatically increase when it hits a threshold. This is a best practice to prevent outages.
+      type: boolean
+      required: false
+      default: true
+    - name: disk_autoresize_limit
+      description: The maximum size to which the disk can be automatically resized. A value of 0 means no limit. It is recommended to set a limit for cost control.
+      type: number
+      required: false
+      default: 0
+    - name: user_labels
+      description: A map of key/value labels to apply to the instance.
+      type: object
+      required: false
+      default: {}
+    - name: enable_private_ip
+      description: If set to true, the instance will have a private IP address in the specified VPC network. This is a security best practice.
+      type: boolean
+      required: false
+      default: false
+    - name: private_network_self_link
+      description: The self-link of the VPC network for private IP. Required if `enable_private_ip` is true.
+      type: string
+      required: false
+      default: null
+    - name: allocated_ip_range_name
+      description: The name of the allocated IP range for private services access, if required.
+      type: string
+      required: false
+      default: null
+    - name: enable_public_ip
+      description: If set to true, the instance will have a public IP address. Access should be restricted via `authorized_networks`.
+      type: boolean
+      required: false
+      default: false
+    - name: authorized_networks
+      description: A list of authorized networks for public IP access. Each object can have `value` (CIDR), `name`, and `expiration_time`.
+      type: array
+      required: false
+      default: []
+    - name: enable_iam_authentication
+      description: If set to true, allows IAM users and service accounts to authenticate to the database. This is a security best practice over password-based authentication.
+      type: boolean
+      required: false
+      default: true
+    - name: database_flags
+      description: A list of database flags to apply to the instance. Each object should have a `name` and `value`.
+      type: array
+      required: false
+      default: []
+    - name: enable_backup
+      description: If set to true, automated daily backups will be enabled.
+      type: boolean
+      required: false
+      default: true
+    - name: backup_start_time
+      description: The start time of the daily backup window in HH:MM format (UTC).
+      type: string
+      required: false
+      default: '02:00'
+    - name: enable_point_in_time_recovery
+      description: If set to true, point-in-time recovery will be enabled using write-ahead logs.
+      type: boolean
+      required: false
+      default: true
+    - name: maintenance_window
+      description: The maintenance window for the instance. Object with `day` (1-7, Sun-Sat), `hour` (0-23, UTC), and `update_track` ('stable' or 'canary').
+      type: object
+      required: false
+      default: null
+    - name: root_password
+      description: The password for the root user. If not set, a random password will be generated.
+      type: string
+      required: false
+      default: null
+    - name: encryption_key_name
+      description: The full resource name of a Cloud KMS key for Customer-Managed Encryption Keys (CMEK).
+      type: string
+      required: false
+      default: null
+    - name: databases
+      description: A list of database objects to create in the instance. Each object can have `name`, `charset`, and `collation`.
+      type: array
+      required: false
+      default: []
+    - name: users
+      description: A list of user objects to create in the instance. Each object can have `name`, `password`, `host`, and `type`. If `password` is null for a `BUILT_IN` user, a random one will be generated.
+      type: array
+      required: false
+      default: []
+    - name: read_replicas
+      description: A list of read replica configurations to create. Replicas inherit some settings from the primary but can be customized.
+      type: array
+      required: false
+      default: []
+    variableGroups:
+    - name: Instance Basics
+      description: Core settings for the Cloud SQL instance.
+      variables:
+      - project_id
+      - name
+      - database_version
+      - region
+      - zone
+    - name: Instance Sizing & High Availability
+      description: Configure the performance, storage, and availability of the instance.
+      variables:
+      - tier
+      - availability_type
+      - deletion_protection_enabled
+      - disk_type
+      - disk_size
+      - disk_autoresize
+      - disk_autoresize_limit
+    - name: Networking
+      description: Configure public and private network access.
+      variables:
+      - enable_private_ip
+      - private_network_self_link
+      - allocated_ip_range_name
+      - enable_public_ip
+      - authorized_networks
+    - name: Security
+      description: Settings for authentication and encryption.
+      variables:
+      - root_password
+      - enable_iam_authentication
+      - encryption_key_name
+    - name: Operations & Management
+      description: Configure backups, maintenance, and labels.
+      variables:
+      - enable_backup
+      - backup_start_time
+      - enable_point_in_time_recovery
+      - maintenance_window
+      - user_labels
+    - name: Instance Components
+      description: Define databases, users, and read replicas.
+      variables:
+      - databases
+      - users
+      - read_replicas
+      - database_flags
+    outputs:
+    - name: instance
+      description: The full `google_sql_database_instance` resource object for the primary instance.
+      sensitive: true
+    - name: instance_connection_name
+      description: The connection name of the primary Cloud SQL instance, used by proxy and connectors.
+    - name: instance_name
+      description: The name of the primary Cloud SQL instance.
+    - name: private_ip_address
+      description: The private IP address assigned to the primary Cloud SQL instance.
+    - name: public_ip_address
+      description: The public IP address assigned to the primary Cloud SQL instance.
+    - name: read_replica_connection_names
+      description: A map of read replica names to their connection names.
+    - name: read_replicas
+      description: A map of all created read replica `google_sql_database_instance` objects, keyed by their names.
+      sensitive: true
+    - name: service_account_email_address
+      description: The email address of the service account delegated to the primary Cloud SQL instance.
+    - name: generated_root_password
+      description: The randomly generated root password, if `root_password` was not provided. Store this securely.
+      sensitive: true
+    - name: generated_user_passwords
+      description: A map of usernames to their randomly generated passwords for users where no password was provided.
+      sensitive: true
+  requirements:
+    roles:
+    - level: Project
+      roles:
+      - roles/cloudsql.admin
+      - roles/compute.networkUser # Required if using a shared VPC
+      - roles/servicenetworking.serviceAgent # Required for private networking
+    - level: Project
+      roles:
+      - roles/cloudkms.cryptoKeyEncrypterDecrypter # Required if using CMEK
+      description: The project where the KMS key resides.
+    permissions:
+    - compute.networks.get
+    - servicenetworking.services.addPeering
+    - cloudkms.cryptoKeyVersions.useToEncrypt
+    - cloudkms.cryptoKeyVersions.useToDecrypt
+    services:
+    - sqladmin.googleapis.com
+    - compute.googleapis.com
+    - servicenetworking.googleapis.com
+    - cloudkms.googleapis.com
+    - iam.googleapis.com
