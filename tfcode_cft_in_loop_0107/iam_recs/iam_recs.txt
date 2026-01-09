@@ -1,0 +1,58 @@
+{
+  "resourceRoles": [
+    {
+      "resourceName": "projects/gcp-project",
+      "roles": [
+        {
+          "name": "roles/cloudsql.admin",
+          "permissions": [
+            "cloudsql.databases.delete",
+            "cloudsql.users.create",
+            "cloudsql.users.get",
+            "cloudsql.instances.delete",
+            "serviceusage.services.get",
+            "cloudsql.instances.create",
+            "cloudsql.users.delete",
+            "cloudsql.instances.get",
+            "cloudsql.databases.create",
+            "serviceusage.services.list",
+            "cloudsql.databases.get"
+          ]
+        },
+        {
+          "name": "roles/serviceusage.serviceUsageAdmin",
+          "permissions": [
+            "serviceusage.services.use",
+            "serviceusage.services.get",
+            "serviceusage.services.list"
+          ]
+        },
+        {
+          "name": "roles/iam.serviceAccountUser",
+          "permissions": [
+            "iam.serviceAccounts.actAs"
+          ]
+        },
+        {
+          "name": "roles/iam.operationViewer",
+          "permissions": [
+            "iam.operations.get"
+          ]
+        }
+      ]
+    }
+  ],
+  "[cloud_iam.policy_ai.iampolicyai.IacRolesAdditionalInfo.additional_info]": {
+    "resourceInfos": [
+      {
+        "resourceName": "projects/gcp-project",
+        "createResourceTypes": [
+          "google_project_service",
+          "google_sql_database",
+          "google_sql_database_instance",
+          "google_sql_user"
+        ]
+      }
+    ]
+  }
+}
