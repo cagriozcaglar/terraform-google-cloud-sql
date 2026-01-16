@@ -1,0 +1,16 @@
+# Create one database within the instance
+  databases = [
+    {
+      name    = "app_database"
+      charset = "UTF8"
+    }
+  ]
+
+  # Create one user for the database.
+  # The password is generated randomly and should be managed via a secrets manager in production.
+  users = [
+    {
+      name     = "app_user"
+      password = random_password.db_user_password.result
+    }
+  ]

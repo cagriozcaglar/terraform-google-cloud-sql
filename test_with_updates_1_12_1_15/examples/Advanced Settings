@@ -1,0 +1,6 @@
+# Add custom labels for organization and billing
+  user_labels = {
+    environment = "example"
+    owner       = "terraform"
+  }
+}

@@ -1,0 +1,5 @@
+project_id       = var.project_id
+  name             = "example-postgres-${random_string.db_name_suffix.result}"
+  database_version = "POSTGRES_14"
+  region           = var.region
+  tier             = "db-g1-small" # A small, cost-effective tier for an example

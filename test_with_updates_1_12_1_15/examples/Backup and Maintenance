@@ -1,0 +1,5 @@
+# Customize the backup schedule
+  backup_configuration = {
+    start_time       = "05:00"
+    retained_backups = 7
+  }

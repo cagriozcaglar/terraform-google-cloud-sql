@@ -1,0 +1,5 @@
+# Configure the instance to use the private VPC created above.
+  # Public IP is disabled by default (ipv4_enabled = false).
+  ip_configuration = {
+    private_network = google_compute_network.vpc_network.id
+  }
