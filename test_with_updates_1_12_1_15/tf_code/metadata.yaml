@@ -1,0 +1,237 @@
+#
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: TerraformBlueprint
+metadata:
+  name: terraform-google-cloud-sql
+  source:
+    type: git
+    git:
+      repo: https://github.com/GoogleCloudPlatform/terraform-google-cloud-sql.git
+      # A subdirectory in the repository.
+      dir: /
+spec:
+  info:
+    title: Cloud SQL Instance
+    version: 1.0.0
+    actuationTool:
+      type: Terraform
+      versions:
+      - ">= 1.3"
+    description:
+      tagline: A comprehensive module for deploying a Google Cloud SQL instance, complete with database and user management.
+      detailed: This blueprint deploys a fully configured Google Cloud SQL instance (supporting MySQL, PostgreSQL, and SQL Server). It includes best-practice defaults for high availability, security (IAM authentication, private networking), and operations (backups, maintenance). It also allows for the declarative creation of databases and users within the instance.
+    icon:
+      path: static/icon.png
+    diagrams:
+      - name: architecture
+        path: static/architecture.png
+        description: A high-level diagram showing the Cloud SQL instance within a VPC network.
+    documentations:
+      - title: Module Documentation
+        url: https://registry.terraform.io/modules/hashicorp/google/latest/submodules/sql_database
+    labels:
+      - gcp
+      - cloud-sql
+      - database
+      - rdbms
+      - mysql
+      - postgres
+      - sqlserver
+
+  deployment:
+    variables:
+      - name: name
+        description: The name of the Cloud SQL instance. This does not have to be unique, but it's a good practice.
+        type: string
+        default: "default-sql-instance"
+        required: false
+      - name: project_id
+        description: The ID of the project in which the resource belongs. If it is not provided, the provider project is used.
+        type: string
+        default: null
+        required: false
+      - name: region
+        description: The region where the Cloud SQL instance will be created.
+        type: string
+        default: "us-central1"
+        required: false
+      - name: database_version
+        description: The database engine version to use. See https://cloud.google.com/sql/docs/db-versions for supported versions. Examples: `POSTGRES_14`, `MYSQL_8_0`, `SQLSERVER_2019_STANDARD`.
+        type: string
+        default: "MYSQL_8_0"
+        required: false
+      - name: tier
+        description: The machine type to use. See https://cloud.google.com/sql/pricing for more details. Example: `db-n1-standard-1`.
+        type: string
+        default: "db-n1-standard-1"
+        required: false
+      - name: availability_type
+        description: The availability type of the Cloud SQL instance. A `REGIONAL` instance will have a standby in a different zone. A `ZONAL` instance will be a single-zone instance. `REGIONAL` is the default and recommended for production.
+        type: string
+        default: "REGIONAL"
+        required: false
+      - name: deletion_protection
+        description: Whether or not to allow Terraform to destroy the instance. It is recommended to set this to `true` for production environments.
+        type: bool
+        default: true
+        required: false
+      - name: user_labels
+        description: A map of labels to assign to the instance.
+        type: map(string)
+        default: {}
+        required: false
+      - name: ip_configuration
+        description: Network configuration for the instance. Best practice is to disable public IP (`ipv4_enabled = false`) and use a `private_network` for internal traffic.
+        type: object
+        default: {}
+        required: false
+      - name: disk_type
+        description: The type of disk to use for storage. `PD_SSD` is recommended for most workloads.
+        type: string
+        default: "PD_SSD"
+        required: false
+      - name: disk_size
+        description: The initial size of the disk in GB.
+        type: number
+        default: 10
+        required: false
+      - name: disk_autoresize
+        description: Whether to allow the instance to automatically increase storage size. Recommended to be `true` to prevent outages due to full disks.
+        type: bool
+        default: true
+        required: false
+      - name: disk_autoresize_limit
+        description: The maximum size to which storage can be auto-increased. A value of `0` means no limit. A non-zero value is recommended for cost control.
+        type: number
+        default: 100
+        required: false
+      - name: backup_configuration
+        description: Configuration for backups and point-in-time recovery. Set `enabled = true` to activate. `point_in_time_recovery_enabled` requires binary logging to be enabled for MySQL.
+        type: object
+        default: {}
+        required: false
+      - name: maintenance_window
+        description: The maintenance window for the instance. If not provided, a default window will be assigned.
+        type: object
+        default: null
+        required: false
+      - name: cloudsql_iam_authentication
+        description: Enables IAM database authentication for the instance. This is a best practice, eliminating the need for static passwords.
+        type: bool
+        default: true
+        required: false
+      - name: require_ssl
+        description: Whether to require SSL/TLS for all client connections.
+        type: bool
+        default: true
+        required: false
+      - name: encryption_key_name
+        description: The full resource name of the KMS key to use for encryption. If not provided, a Google-managed key will be used.
+        type: string
+        default: null
+        required: false
+      - name: database_flags
+        description: A list of key-value pairs to set as database flags.
+        type: list(object)
+        default: []
+        required: false
+      - name: databases
+        description: A list of database objects to create in the Cloud SQL instance.
+        type: list(object)
+        default: []
+        required: false
+      - name: users
+        description: A list of database users to create. The `password` field is sensitive and will not be displayed in logs.
+        type: list(object)
+        default: []
+        required: false
+
+    variableGroups:
+      - name: Basic Instance Configuration
+        description: Core settings for the Cloud SQL instance.
+        variables:
+          - name
+          - project_id
+          - region
+          - database_version
+          - tier
+          - availability_type
+      - name: Storage Configuration
+        description: Settings related to the instance's disk and storage.
+        variables:
+          - disk_type
+          - disk_size
+          - disk_autoresize
+          - disk_autoresize_limit
+      - name: Networking and Security
+        description: Configure network access, IAM authentication, and encryption.
+        variables:
+          - ip_configuration
+          - require_ssl
+          - cloudsql_iam_authentication
+          - encryption_key_name
+          - deletion_protection
+      - name: Backup and Maintenance
+        description: Define backup schedule and maintenance windows.
+        variables:
+          - backup_configuration
+          - maintenance_window
+      - name: Databases and Users
+        description: Define the databases and user accounts to be created.
+        variables:
+          - databases
+          - users
+      - name: Advanced Settings
+        description: Other settings for labeling and database flags.
+        variables:
+          - user_labels
+          - database_flags
+
+    outputs:
+      - name: instance_name
+        description: The name of the Cloud SQL instance.
+      - name: instance_connection_name
+        description: The connection name of the Cloud SQL instance, used for connecting via the Cloud SQL Auth proxy.
+      - name: private_ip_address
+        description: The private IPv4 address assigned to the instance.
+      - name: public_ip_address
+        description: The public IPv4 address assigned to the instance.
+      - name: self_link
+        description: The URI of the created resource.
+      - name: service_account_email_address
+        description: The email address of the service account granted `cloudsql.client` permissions.
+      - name: databases
+        description: A map of the database resources created, keyed by database name.
+      - name: users
+        description: A map of the user resources created, keyed by user name.
+
+  requirements:
+    services:
+      - sqladmin.googleapis.com
+      - compute.googleapis.com
+      - serviceusage.googleapis.com
+      - cloudkms.googleapis.com # Optional, if using CMEK
+    roles:
+      - role: roles/cloudsql.admin
+        level: project
+        description: Required to create and manage Cloud SQL instances, databases, and users.
+      - role: roles/compute.networkAdmin
+        level: project
+        description: Required to manage private networking for the Cloud SQL instance.
+      - role: roles/cloudkms.cryptoKeyEncrypterDecrypter
+        level: project
+        description: Required on the Cloud SQL Service Account if using a customer-managed encryption key (CMEK).
